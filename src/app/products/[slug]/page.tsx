@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { products, getProduct, getRelatedProducts } from "@/data/products";
+import { products, getProduct, getDiscoverSimilar } from "@/data/products";
 import { ImageGallery } from "@/components/image-gallery";
 import { ProductInfo } from "@/components/product-info";
 import { ProductDetailsAccordion } from "@/components/product-details-accordion";
-import { RelatedProducts } from "@/components/related-products";
+import { DiscoverSimilar } from "@/components/discover-similar";
 import { RecentlyViewedSection } from "./recently-viewed-section";
 
 interface PageProps {
@@ -37,7 +37,7 @@ export default async function ProductPage({ params }: PageProps) {
     notFound();
   }
 
-  const related = getRelatedProducts(product);
+  const similar = getDiscoverSimilar(product);
 
   return (
     <main className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-10">
@@ -57,8 +57,13 @@ export default async function ProductPage({ params }: PageProps) {
         <ProductDetailsAccordion product={product} />
       </div>
 
-      {/* Related products */}
-      <RelatedProducts products={related} />
+      {similar.collectionSlug && (
+        <DiscoverSimilar
+          fromProductSlug={product.slug}
+          collectionSlug={similar.collectionSlug}
+          products={similar.products}
+        />
+      )}
 
       {/* Recently viewed */}
       <RecentlyViewedSection productId={product.id} />

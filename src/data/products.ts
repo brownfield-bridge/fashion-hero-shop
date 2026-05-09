@@ -3502,6 +3502,59 @@ export function getRelatedProducts(product: Product, limit = 8): Product[] {
     .slice(0, limit);
 }
 
+const GENERIC_COLLECTIONS = new Set(["all", "new-arrivals", "best-sellers", "sale"]);
+
+export function getPrimaryCollectionSlug(product: Product): string | null {
+  return product.collections.find((c) => !GENERIC_COLLECTIONS.has(c)) ?? null;
+}
+
+function hashString(s: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h = Math.imul(h ^ s.charCodeAt(i), 16777619) >>> 0;
+  }
+  return h;
+}
+
+function mulberry32(seed: number): () => number {
+  let t = seed >>> 0;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let x = t;
+    x = Math.imul(x ^ (x >>> 15), x | 1);
+    x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seededShuffle<T>(arr: T[], seed: string): T[] {
+  const rng = mulberry32(hashString(seed));
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+export function getDiscoverSimilar(
+  product: Product,
+  limit = 6
+): { collectionSlug: string | null; products: Product[] } {
+  const collectionSlug = getPrimaryCollectionSlug(product);
+  if (!collectionSlug) return { collectionSlug: null, products: [] };
+
+  const candidates = products.filter(
+    (p) => p.id !== product.id && p.collections.includes(collectionSlug)
+    // TODO: filter sold-out when stock data exists
+  );
+
+  return {
+    collectionSlug,
+    products: seededShuffle(candidates, product.slug).slice(0, limit),
+  };
+}
+
 export function getProductsBySeller(sellerSlug: string): Product[] {
   const seller = getSeller(sellerSlug);
   if (!seller) return [];
